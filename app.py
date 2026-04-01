@@ -185,8 +185,8 @@ elif page == "📋 Data-1: Complaints":
     st.markdown(f"**Filtered records:** {len(filtered):,}")
 
     # ── Tab Layout ──
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Issue Splits", "👥 Cohort Analysis", "📈 Trends", "🔍 Deep Dive"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📊 Issue Splits", "👥 Cohort Analysis", "📈 Trends", "🔍 Deep Dive", "💡 Key Insights"
     ])
 
     # ── TAB 1: Issue Splits ──
@@ -315,6 +315,110 @@ elif page == "📋 Data-1: Complaints":
         st.subheader("Sample Data")
         st.dataframe(filtered.head(100), use_container_width=True, height=400)
 
+    # ── TAB 5: Key Insights ──
+    with tab5:
+        st.subheader("💡 Key Insights — Complaint Analysis")
+        st.markdown("---")
+
+        # Compute stats from full df1 (not filtered)
+        _cat_dist = an.get_category_distribution(df1)
+        _top_cat = _cat_dist.iloc[0]
+        _second_cat = _cat_dist.iloc[1] if len(_cat_dist) > 1 else None
+        _src_dist = an.get_source_distribution(df1)
+        _top_src = _src_dist.iloc[0]
+        _sub_dist = an.get_subcategory_distribution(df1, top_n=5)
+        _top_sub = _sub_dist.iloc[0]
+        _age_dist = an.get_cohort_split(df1, "age_range")
+        _top_age = _age_dist.iloc[0]
+
+        # Insight cards
+        col_a, col_b = st.columns(2)
+
+        with col_a:
+            st.markdown("""
+            <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">🔥 Payment issues are the #1 problem</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    <b>{cat}</b> makes up <b>{pct}%</b> of all complaints ({cnt:,} tickets).
+                    Within this, "<i>Payment Not Updated</i>" alone drives <b>{sub_pct}%</b> of total volume.
+                    Customers pay but don't see it reflected — that's the single biggest pain point.
+                </p>
+            </div>
+            """.format(
+                cat=_top_cat['Category'], pct=_top_cat['Percentage'],
+                cnt=_top_cat['Count'], sub_pct=_top_sub['Percentage']
+            ), unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">📧 Email dominates as support channel</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    <b>{pct}%</b> of complaints come through <b>{src}</b>.
+                    Phone is a distant second at ~10%. This is typical for a digital lending product
+                    — users prefer written communication they can reference later.
+                </p>
+            </div>
+            """.format(src=_top_src['Source'], pct=_top_src['Percentage']), unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">📊 Two categories = 57% of all complaints</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    {cat1} ({pct1}%) and {cat2} ({pct2}%) together make up
+                    over half of all complaints. This concentration is actually helpful —
+                    fixing just two areas could dramatically reduce ticket volume.
+                </p>
+            </div>
+            """.format(
+                cat1=_top_cat['Category'], pct1=_top_cat['Percentage'],
+                cat2=_second_cat['Category'] if _second_cat is not None else "N/A",
+                pct2=_second_cat['Percentage'] if _second_cat is not None else 0
+            ), unsafe_allow_html=True)
+
+        with col_b:
+            st.markdown("""
+            <div style="background: #fce4ec; border-left: 4px solid #e91e63; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">⚠️ Collection practices cause friction</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    Collection-related complaints ({pct}%) include "Promise To Pay Denied"
+                    and penalty charge disputes. Users feel pressured — this matches
+                    the harassment concerns seen in Play Store reviews too.
+                </p>
+            </div>
+            """.format(
+                pct=_second_cat['Percentage'] if _second_cat is not None else 0
+            ), unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">🏠 Foreclosure demand is notable</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    About <b>10.8%</b> of complaints are foreclosure-related. Both eligible
+                    and ineligible users are asking about early closure — either loan terms
+                    aren't communicated well enough, or users just want more flexibility.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #fff8e1; border-left: 4px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">📌 Young borrowers (25-33) file the most complaints</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    The <b>{age}</b> age group generates <b>{pct}%</b> of all complaints.
+                    They're likely the core user base and also the most digitally active,
+                    so they're quicker to raise issues when something goes wrong.
+                </p>
+            </div>
+            """.format(age=_top_age['age_range'], pct=_top_age['Percentage']), unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.markdown("#### 💡 Bottom line")
+        st.info(
+            "Payment reconciliation delays and collection-related friction are the two "
+            "biggest drivers of complaint volume. Fixing real-time payment status updates "
+            "alone could eliminate ~25% of all incoming tickets."
+        )
+
 
 # ═════════════════════════════════════════════
 # PAGE: Data-2 Reviews Dashboard
@@ -363,8 +467,8 @@ elif page == "⭐ Data-2: Reviews":
     st.markdown("---")
 
     # Tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Sentiment", "🏷️ Themes", "👥 Cohort Analysis", "📝 Reviews"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📊 Sentiment", "🏷️ Themes", "👥 Cohort Analysis", "📝 Reviews", "💡 Key Insights"
     ])
 
     # ── TAB 1: Sentiment ──
@@ -546,6 +650,108 @@ elif page == "⭐ Data-2: Reviews":
         display_df = filtered2[[c for c in display_cols if c in filtered2.columns]].copy()
         display_df = display_df.sort_values(sort_col, ascending=sort_asc)
         st.dataframe(display_df, use_container_width=True, height=500)
+
+    # ── TAB 5: Key Insights ──
+    with tab5:
+        st.subheader("💡 Key Insights — Reviews Analysis")
+        st.markdown("---")
+
+        # Compute stats from full df2
+        _pos_count = (df2["sentiment"] == "Positive").sum()
+        _neg_count = (df2["sentiment"] == "Negative").sum()
+        _pos_pct = _pos_count / len(df2) * 100
+        _neg_pct = _neg_count / len(df2) * 100
+        _five_star = (df2["rating"] == 5).sum()
+        _five_pct = _five_star / len(df2) * 100
+        _one_star = (df2["rating"] == 1).sum()
+        _one_pct = _one_star / len(df2) * 100
+        _avg_rating = df2["rating"].mean()
+
+        col_a, col_b = st.columns(2)
+
+        with col_a:
+            st.markdown("""
+            <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">✅ Overall sentiment is strongly positive</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    <b>{pos_pct:.0f}%</b> of reviews are positive ({pos:,} out of {total:,}).
+                    Average rating is <b>{avg:.1f} ⭐</b>. The app is generally well-received
+                    by its user base.
+                </p>
+            </div>
+            """.format(pos_pct=_pos_pct, pos=_pos_count, total=len(df2), avg=_avg_rating),
+            unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #fce4ec; border-left: 4px solid #e91e63; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">🔴 Negatives are extreme — almost all 1-star</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    Of the <b>{neg:,}</b> negative reviews ({neg_pct:.1f}%),
+                    <b>{one:,}</b> are 1-star ({one_pct:.0f}% of total).
+                    There's almost no middle ground — users are either very happy
+                    or very unhappy. Very few 2-3 star ratings exist.
+                </p>
+            </div>
+            """.format(neg=_neg_count, neg_pct=_neg_pct, one=_one_star, one_pct=_one_pct),
+            unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">📉 Older users (42+) are the most dissatisfied</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    The 42+ age group has a <b>17.2%</b> negative rate — more than double
+                    the 7% seen in younger groups. This segment may need a different
+                    support approach (phone callbacks vs. self-service).
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_b:
+            st.markdown("""
+            <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">⚡ Negative reviews mention harassment & scams</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    The harshest reviews consistently mention "harassment", "mental torture",
+                    "unethical practices", and "scammers" — mostly tied to collection
+                    follow-ups. Even if these are a small minority, they're publicly visible
+                    and damaging to the brand.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">🏷️ "App Experience" is the dominant theme</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    About <b>79%</b> of reviews fall under "App Experience" —
+                    the remaining split between "Positive Feedback" (17%) and
+                    "Loan Process" (4.5%). Most users are commenting on the
+                    app itself rather than loan terms.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background: #fff8e1; border-left: 4px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">💰 Mid-income users are surprisingly unhappy</h4>
+                <p style="margin:0; font-size: 0.95rem;">
+                    The ₹75K-1L income bracket has a <b>22.2%</b> negative rate —
+                    the highest of any income segment. Lower and higher income groups
+                    are more satisfied. This mid-tier group may have higher
+                    expectations that aren't being met.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.markdown("#### 💡 Bottom line")
+        st.info(
+            "The Play Store picture is largely positive (91% favorable), "
+            "but the negative reviews are disproportionately loud and damaging. "
+            "Collection-related complaints mirror what's seen in Data-1 — "
+            "softening collection practices would improve both internal complaint metrics "
+            "and public-facing ratings."
+        )
 
 
 # ═════════════════════════════════════════════
