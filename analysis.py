@@ -5,6 +5,18 @@ Handles data loading, cleaning, aggregation, sentiment analysis, and theme extra
 
 import pandas as pd
 import numpy as np
+import nltk
+import os
+
+# Auto-download NLTK data required by TextBlob (needed for Streamlit Cloud deployment)
+_nltk_data_dir = os.path.join(os.path.expanduser("~"), "nltk_data")
+os.makedirs(_nltk_data_dir, exist_ok=True)
+for _pkg in ["punkt", "punkt_tab"]:
+    try:
+        nltk.data.find(f"tokenizers/{_pkg}")
+    except LookupError:
+        nltk.download(_pkg, quiet=True)
+
 from textblob import TextBlob
 
 

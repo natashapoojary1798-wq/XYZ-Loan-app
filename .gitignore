@@ -1,2 +1,19 @@
-.venv
-__pycache__
+# Virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NLTK data (downloaded at runtime)
+nltk_data/

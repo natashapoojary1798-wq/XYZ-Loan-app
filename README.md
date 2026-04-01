@@ -56,6 +56,65 @@ venv/bin/streamlit run app.py
 
 The dashboard will open at **http://localhost:8501**.
 
+### 5. Make accessible on local network (optional)
+
+```bash
+streamlit run app.py --server.address 0.0.0.0
+```
+
+Others on the same Wi-Fi/LAN can access at `http://<your-local-ip>:8501`.
+
+---
+
+## ☁️ Deploy on Streamlit Community Cloud (Free, Public URL)
+
+### Prerequisites
+- A **GitHub account**
+- Code pushed to a **public** (or private with Streamlit access) GitHub repository
+
+### Steps
+
+1. **Push to GitHub** — ensure these files are in the repo:
+   ```
+   app.py
+   analysis.py
+   requirements.txt
+   .streamlit/config.toml
+   csv/data-1-new.csv
+   csv/data-2-new.csv
+   csv/crosstab1-data1.csv
+   csv/crosstab1-data2.csv
+   csv/crosstab2-data1.csv
+   ```
+
+2. **Go to** [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub
+
+3. **Click** "New app" → select your repository, branch (`main`), and main file: `app.py`
+
+4. **Click** "Deploy" — Streamlit Cloud will install dependencies from `requirements.txt` and start the app
+
+5. **Done!** You'll get a public URL like `https://your-app-name.streamlit.app`
+
+### ⚠️ Important Notes
+
+| Concern | Details |
+|---------|---------|
+| **NLTK data** | Auto-downloaded at runtime (handled in `analysis.py`) |
+| **Large CSV files** | `data-1-new.csv` is 27 MB — works fine but makes repo heavy. Consider Git LFS for repos > 100 MB |
+| **Free tier limits** | 1 GB RAM, apps sleep after inactivity, public repos only (private repos need paid plan) |
+| **Secrets** | No secrets/API keys needed for this app |
+
+### Alternative Deployment Options
+
+| Platform | Free Tier | URL |
+|----------|-----------|-----|
+| **Streamlit Cloud** | ✅ Yes | [share.streamlit.io](https://share.streamlit.io) |
+| **Hugging Face Spaces** | ✅ Yes | [huggingface.co/spaces](https://huggingface.co/spaces) |
+| **Railway** | ✅ Starter plan | [railway.app](https://railway.app) |
+| **Render** | ✅ Yes | [render.com](https://render.com) |
+
+---
+
 ## 📊 Dashboard Pages
 
 ### 🏠 Overview
