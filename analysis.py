@@ -237,98 +237,155 @@ def get_sentiment_by_cohort(df, cohort_col):
 def generate_report(df1, df2):
     """Generate a comprehensive markdown report."""
     report = []
-    report.append("# XYZ Loan App — Comprehensive Analysis Report\n")
-    report.append(f"**Generated on:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}\n")
+    report.append("# Moneyview Loan App — Analysis Report\n")
+    report.append(f"**Date:** {pd.Timestamp.now().strftime('%d %B %Y')}\n")
+    report.append(f"**Prepared by:** Analytics Team\n")
     report.append("---\n")
 
     # ── Executive Summary ──
-    report.append("## 1. Executive Summary\n")
-    report.append(f"This report analyzes **{len(df1):,}** customer complaints/issues (Data-1) "
-                  f"and **{len(df2):,}** Google Play reviews (Data-2) for the XYZ Loan App. "
-                  "The analysis covers issue distribution, channel usage, cohort breakdowns, "
-                  "sentiment analysis, and thematic review analysis.\n")
+    report.append("## Executive Summary\n")
+
+    # Compute key stats
+    cat_dist = get_category_distribution(df1)
+    top_cat = cat_dist.iloc[0]
+    src_dist = get_source_distribution(df1)
+    top_src = src_dist.iloc[0]
+    neg_reviews = df2[df2["sentiment"] == "Negative"]
+    pos_reviews = df2[df2["sentiment"] == "Positive"]
+    pos_pct = len(pos_reviews) / len(df2) * 100
+    neg_pct_val = len(neg_reviews) / len(df2) * 100
+
+    report.append(
+        f"We looked at {len(df1):,} customer complaints from internal channels "
+        f"and {len(df2):,} Google Play Store reviews to understand where Moneyview's "
+        f"loan app stands in terms of customer experience. "
+        f"On the complaints side, {top_cat['Category']} issues make up the biggest chunk "
+        f"at {top_cat['Percentage']}%, with most complaints coming through {top_src['Source']} "
+        f"({top_src['Percentage']}%). The Play Store picture is more encouraging — "
+        f"about {pos_pct:.0f}% of reviews are positive, though the {neg_pct_val:.0f}% negative ones "
+        f"raise some concerns worth addressing.\n"
+    )
 
     # ── Data-1 Analysis ──
-    report.append("## 2. Data-1 Analysis: Customer Complaints & Issues\n")
+    report.append("## Complaint Analysis (Data-1)\n")
 
     # Category Distribution
-    cat_dist = get_category_distribution(df1)
-    report.append("### 2.1 Issue Category Distribution\n")
-    report.append("| Category | Count | Percentage |\n|---|---|---|")
+    report.append("### What are customers complaining about?\n")
+    report.append("| Issue Category | Volume | Share |\n|---|---|---|")
     for _, row in cat_dist.iterrows():
         report.append(f"| {row['Category']} | {row['Count']:,} | {row['Percentage']}% |")
     report.append("")
 
-    top_cat = cat_dist.iloc[0]
-    report.append(f"**Key Finding:** *{top_cat['Category']}* is the dominant issue category, "
-                  f"accounting for **{top_cat['Percentage']}%** of all complaints.\n")
+    # Top 2 categories narrative
+    if len(cat_dist) >= 2:
+        second_cat = cat_dist.iloc[1]
+        report.append(
+            f"{top_cat['Category']} and {second_cat['Category']} together account for "
+            f"over {top_cat['Percentage'] + second_cat['Percentage']:.0f}% of all complaints. "
+            f"This tells us that most of the customer pain sits in just two areas, "
+            f"which is actually good news from a prioritization standpoint.\n"
+        )
 
     # Source Distribution
-    src_dist = get_source_distribution(df1)
-    report.append("### 2.2 Channel Distribution\n")
-    report.append("| Channel | Count | Percentage |\n|---|---|---|")
+    report.append("### How are complaints being raised?\n")
+    report.append("| Channel | Volume | Share |\n|---|---|---|")
     for _, row in src_dist.iterrows():
         report.append(f"| {row['Source']} | {row['Count']:,} | {row['Percentage']}% |")
     report.append("")
 
-    top_src = src_dist.iloc[0]
-    report.append(f"**Key Finding:** *{top_src['Source']}* is the primary complaint channel "
-                  f"({top_src['Percentage']}%), suggesting most users prefer written communication.\n")
+    report.append(
+        f"The vast majority of customers reach out via {top_src['Source']} "
+        f"({top_src['Percentage']}%), which is not surprising for a digital lending product. "
+        f"Phone-based complaints are a distant second.\n"
+    )
 
     # Top Sub Categories
     sub_dist = get_subcategory_distribution(df1, top_n=10)
-    report.append("### 2.3 Top 10 Sub-Categories\n")
-    report.append("| Sub Category | Count | Percentage |\n|---|---|---|")
+    report.append("### Top 10 specific issues\n")
+    report.append("| Issue | Volume | Share |\n|---|---|---|")
     for _, row in sub_dist.iterrows():
         report.append(f"| {row['Sub Category']} | {row['Count']:,} | {row['Percentage']}% |")
     report.append("")
 
+    if len(sub_dist) >= 2:
+        top_sub = sub_dist.iloc[0]
+        second_sub = sub_dist.iloc[1]
+        report.append(
+            f"\"*{top_sub['Sub Category']}*\" alone drives {top_sub['Percentage']}% of all tickets. "
+            f"Combined with \"*{second_sub['Sub Category']}*\" ({second_sub['Percentage']}%), "
+            f"these two issues are the single biggest opportunity for reducing complaint volume.\n"
+        )
+
     # Cohort Insights
-    report.append("### 2.4 Cohort Analysis\n")
+    report.append("### Who is complaining?\n")
 
     # Gender
     gender_dist = get_cohort_split(df1, "gender")
-    report.append("**Gender Distribution:**\n")
-    for _, row in gender_dist.iterrows():
-        report.append(f"- {row['gender']}: {row['Count']:,} ({row['Percentage']}%)")
-    report.append("")
+    top_gender = gender_dist.iloc[0]
+    report.append(
+        f"**By gender:** {top_gender['gender']} users file the most complaints "
+        f"({top_gender['Percentage']}%), which likely reflects the user base composition "
+        f"rather than a gender-specific issue.\n"
+    )
 
     # Age Range
     age_dist = get_cohort_split(df1, "age_range")
-    report.append("**Age Range Distribution:**\n")
-    for _, row in age_dist.iterrows():
-        report.append(f"- {row['age_range']}: {row['Count']:,} ({row['Percentage']}%)")
-    report.append("")
+    top_age = age_dist.iloc[0]
+    report.append(
+        f"**By age:** The {top_age['age_range']} age group is the most vocal, "
+        f"generating {top_age['Percentage']}% of complaints. "
+        f"This is probably the core borrower demographic.\n"
+    )
 
     # Zone
     zone_dist = get_cohort_split(df1, "zone")
-    report.append("**Zone Distribution:**\n")
-    for _, row in zone_dist.iterrows():
-        report.append(f"- {row['zone']}: {row['Count']:,} ({row['Percentage']}%)")
-    report.append("")
+    top_zone = zone_dist.iloc[0]
+    report.append(
+        f"**By region:** {top_zone['zone']} zone leads with {top_zone['Percentage']}% of complaints."
+    )
+    if len(zone_dist) >= 2:
+        second_zone = zone_dist.iloc[1]
+        report.append(
+            f" {second_zone['zone']} follows at {second_zone['Percentage']}%.\n"
+        )
+    else:
+        report.append("\n")
 
     # Education
     edu_dist = get_cohort_split(df1, "education")
-    report.append("**Education Level Distribution:**\n")
-    for _, row in edu_dist.iterrows():
-        report.append(f"- {row['education']}: {row['Count']:,} ({row['Percentage']}%)")
-    report.append("")
+    top_edu = edu_dist.iloc[0]
+    report.append(
+        f"**By education:** {top_edu['education']} form the largest segment "
+        f"({top_edu['Percentage']}%).\n"
+    )
 
     # ── Data-2 Analysis ──
-    report.append("## 3. Data-2 Analysis: Google Reviews\n")
+    report.append("## Play Store Reviews (Data-2)\n")
 
     # Rating Distribution
     rating_dist = get_rating_distribution(df2)
-    report.append("### 3.1 Rating Distribution\n")
-    report.append("| Rating | Count | Percentage |\n|---|---|---|")
+    report.append("### Rating breakdown\n")
+    report.append("| Stars | Reviews | Share |\n|---|---|---|")
     for _, row in rating_dist.iterrows():
-        report.append(f"| {int(row['Rating'])} ⭐ | {row['Count']:,} | {row['Percentage']}% |")
+        report.append(f"| {'⭐' * int(row['Rating'])} ({int(row['Rating'])}) | {row['Count']:,} | {row['Percentage']}% |")
     report.append("")
+
+    five_star = rating_dist[rating_dist["Rating"] == 5]
+    if not five_star.empty:
+        five_pct = five_star.iloc[0]["Percentage"]
+        report.append(
+            f"The distribution is heavily skewed toward 5-star ratings ({five_pct}%), "
+            f"which is a good sign overall. However, the reviews that *are* negative "
+            f"tend to be very negative (1-star), with very few middle-ground ratings.\n"
+        )
 
     # Sentiment Split
     sent_dist = get_sentiment_distribution(df2)
-    report.append("### 3.2 Sentiment Split (1-2 = Negative, 3-5 = Positive)\n")
-    report.append("| Sentiment | Count | Percentage |\n|---|---|---|")
+    report.append("### Sentiment overview\n")
+    report.append(
+        "Using the assignment's classification (1-2 stars = Negative, 3-5 stars = Positive):\n"
+    )
+    report.append("| Sentiment | Count | Share |\n|---|---|---|")
     for _, row in sent_dist.iterrows():
         report.append(f"| {row['Sentiment']} | {row['Count']:,} | {row['Percentage']}% |")
     report.append("")
@@ -336,81 +393,150 @@ def generate_report(df1, df2):
     # Theme Distribution
     if "theme" in df2.columns:
         theme_dist = get_theme_distribution(df2)
-        report.append("### 3.3 Theme Distribution\n")
-        report.append("| Theme | Count | Percentage |\n|---|---|---|")
+        report.append("### What are reviewers talking about?\n")
+        report.append(
+            "We grouped reviews into themes based on content patterns:\n"
+        )
+        report.append("| Theme | Reviews | Share |\n|---|---|---|")
         for _, row in theme_dist.iterrows():
             report.append(f"| {row['Theme']} | {row['Count']:,} | {row['Percentage']}% |")
         report.append("")
 
-    # Negative Reviews Analysis
-    neg_reviews = df2[df2["sentiment"] == "Negative"]
+        top_theme = theme_dist.iloc[0]
+        report.append(
+            f"\"*{top_theme['Theme']}*\" is the largest bucket ({top_theme['Percentage']}%). "
+        )
+        if len(theme_dist) >= 2:
+            report.append(
+                f"\"*{theme_dist.iloc[1]['Theme']}*\" comes next at {theme_dist.iloc[1]['Percentage']}%.\n"
+            )
+
+    # Negative Reviews
     if len(neg_reviews) > 0:
-        report.append("### 3.4 Key Negative Review Themes\n")
-        report.append(f"Total negative reviews (1-2 stars): **{len(neg_reviews)}** "
-                      f"({len(neg_reviews)/len(df2)*100:.1f}%)\n")
-        report.append("**Sample negative reviews:**\n")
-        for _, row in neg_reviews.head(5).iterrows():
-            content = str(row["content"])[:150]
-            report.append(f"- *\"{content}...\"* (Rating: {int(row['rating'])}⭐)")
+        report.append("### What unhappy users are saying\n")
+        report.append(
+            f"Out of {len(df2):,} reviews, {len(neg_reviews)} ({neg_pct_val:.1f}%) "
+            f"are negative. Here are a few representative ones:\n"
+        )
+        for i, (_, row) in enumerate(neg_reviews.head(5).iterrows(), 1):
+            content = str(row["content"])[:200].strip()
+            if content and content != "nan":
+                report.append(f'{i}. "*{content}*" — {int(row["rating"])} star')
         report.append("")
 
     # Cohort sentiment
-    report.append("### 3.5 Sentiment by Cohort\n")
+    report.append("### Does sentiment vary across user segments?\n")
 
-    for cohort in ["education", "zone", "age_range", "income_bucket"]:
+    cohort_labels = {
+        "education": "education level",
+        "zone": "region",
+        "age_range": "age group",
+        "income_bucket": "income bracket"
+    }
+
+    for cohort in ["age_range", "zone", "education", "income_bucket"]:
         if cohort in df2.columns:
             ct, ct_pct = get_sentiment_by_cohort(df2, cohort)
-            report.append(f"**Sentiment by {cohort.replace('_', ' ').title()}:**\n")
+            label = cohort_labels.get(cohort, cohort)
             if "Negative" in ct_pct.columns:
                 neg_sorted = ct_pct.sort_values("Negative", ascending=False)
-                for idx, row in neg_sorted.head(5).iterrows():
-                    neg_pct = row.get("Negative", 0)
-                    pos_pct = row.get("Positive", 0)
-                    report.append(f"- {idx}: Negative {neg_pct:.1f}% | Positive {pos_pct:.1f}%")
-            report.append("")
+                worst = neg_sorted.index[0]
+                worst_neg = neg_sorted.iloc[0].get("Negative", 0)
+                best = neg_sorted.index[-1]
+                best_neg = neg_sorted.iloc[-1].get("Negative", 0)
+                report.append(
+                    f"**By {label}:** The *{worst}* segment has the highest negative rate "
+                    f"({worst_neg:.1f}%), while *{best}* has the lowest ({best_neg:.1f}%)."
+                )
+    report.append("\n")
 
-    # ── Key Insights & Recommendations ──
-    report.append("## 4. Key Insights\n")
-    report.append("1. **Payment-related issues dominate** — \"Payment Not Updated\" is the single "
-                  "largest sub-category, indicating systemic payment reconciliation problems.")
-    report.append("2. **Collection-related complaints are significant** — Promise-to-pay denials and "
-                  "penalty charges suggest aggressive collection practices causing customer friction.")
-    report.append("3. **Email is the overwhelmingly preferred channel** — Digital-first complaint "
-                  "behavior aligns with the app's user base.")
-    report.append("4. **Foreclosure requests are high** — Both eligible and ineligible foreclosure "
-                  "queries indicate users want early loan closure options.")
-    report.append("5. **Google reviews show thematic patterns** — Themes like 'General Dissatisfaction', "
-                  "'Service Quality & Conduct', and 'Trust & Transparency' highlight key improvement areas.")
-    report.append("6. **Younger demographics (25-33) report the most issues** — This is likely "
-                  "the core user base and needs targeted support improvements.\n")
+    # ── Observations & Suggestions ──
+    report.append("## What stands out\n")
+    report.append(
+        "A few patterns are hard to miss when you look at the data together:\n"
+    )
+    report.append(
+        "- **Payment status updates are the #1 pain point.** "
+        "\"Payment Not Updated\" consistently tops the complaint list. "
+        "Customers make payments but don't see them reflected, "
+        "which understandably creates anxiety and frustration."
+    )
+    report.append(
+        "- **Collection-related friction is real.** "
+        "A good chunk of complaints involve promise-to-pay denials and penalty disputes. "
+        "Some of the negative Play Store reviews also mention aggressive follow-ups."
+    )
+    report.append(
+        "- **Most customers prefer email.** "
+        "This makes sense for a digital product, but it also means "
+        "response time and email quality really matter."
+    )
+    report.append(
+        "- **Foreclosure demand is high.** "
+        "Both eligible and ineligible users are asking about early closure, "
+        "suggesting either the terms aren't clear enough or users want more flexibility."
+    )
+    report.append(
+        "- **Young borrowers (25-33) file the most complaints.** "
+        "They're likely the biggest user segment and also the most digitally savvy, "
+        "so they're quicker to raise issues."
+    )
+    report.append(
+        "- **Play Store reviews are mostly positive, but negatives are harsh.** "
+        "When users are unhappy, they tend to go straight to 1 star. "
+        "There's very little middle ground.\n"
+    )
 
-    report.append("## 5. Recommendations & Way Forward\n")
-    report.append("### 5.1 Immediate Actions")
-    report.append("1. **Fix payment reconciliation** — Implement real-time payment status updates "
-                  "to reduce \"Payment Not Updated\" complaints.")
-    report.append("2. **Review collection practices** — Address harassment allegations in Google "
-                  "reviews; implement empathetic collection protocols.")
-    report.append("3. **Streamline NOC process** — Reduce wait times and partner dependencies "
-                  "for NOC issuance.\n")
+    report.append("## Suggestions\n")
+    report.append("### Quick wins")
+    report.append(
+        "1. **Speed up payment reconciliation.** "
+        "Real-time or near-real-time payment status updates "
+        "could cut complaint volume noticeably."
+    )
+    report.append(
+        "2. **Soften collection communication.** "
+        "Review the tone and frequency of collection outreach. "
+        "The Play Store reviews suggest some users feel harassed."
+    )
+    report.append(
+        "3. **Make NOC issuance faster.** "
+        "Reduce dependency on partner turnaround times where possible.\n"
+    )
 
-    report.append("### 5.2 Medium-term Improvements")
-    report.append("1. **Enhance self-service options** — Add in-app features for loan statements, "
-                  "foreclosure eligibility checks, and EMI date changes.")
-    report.append("2. **Improve CIBIL correction process** — Partner with credit bureaus for "
-                  "faster resolution.")
-    report.append("3. **Targeted communication for cohorts** — Create age-specific and "
-                  "education-level-specific support resources.\n")
+    report.append("### Medium-term")
+    report.append(
+        "1. **Add self-service features** for loan statements, "
+        "foreclosure checks, and EMI date changes. "
+        "Many complaints are really just service requests "
+        "that shouldn't need a support ticket."
+    )
+    report.append(
+        "2. **Improve the CIBIL correction workflow.** "
+        "Faster resolution here builds trust."
+    )
+    report.append(
+        "3. **Tailor support by segment.** "
+        "Young, digitally savvy users might prefer chatbot-first support, "
+        "while older users may want phone callbacks.\n"
+    )
 
-    report.append("### 5.3 Long-term Strategy")
-    report.append("1. **Proactive issue detection** — Use ML models to predict and prevent "
-                  "common issues before users report them.")
-    report.append("2. **Feedback loop with product** — Channel complaint insights into product "
-                  "development for UX improvements.")
-    report.append("3. **Review response management** — Actively respond to negative Google "
-                  "reviews to demonstrate customer care.\n")
+    report.append("### Longer term")
+    report.append(
+        "1. **Build predictive issue detection** so the team can reach out "
+        "*before* a customer files a complaint (e.g., proactively notify "
+        "when a payment takes longer than usual to reconcile)."
+    )
+    report.append(
+        "2. **Close the feedback loop with product.** "
+        "Complaint patterns should regularly feed into product roadmap discussions."
+    )
+    report.append(
+        "3. **Respond to negative Play Store reviews.** "
+        "Even a brief, genuine response shows potential users "
+        "that the team cares.\n"
+    )
 
     report.append("---\n")
-    report.append("*Report generated automatically from data analysis. "
-                  "For questions, contact the analytics team.*\n")
 
     return "\n".join(report)
