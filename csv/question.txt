@@ -1,0 +1,21 @@
+Assignment Overview:
+"Data - 1: We have curated a dataset from an app, featuring user complaints and issues reported through various channels, including email, phone, chat, and Facebook. 
+Data - 2: Additionally, we've included Google reviews related to an XYZ Loan App. 
+
+Both the data sets are organized by categories and subcategories, along with user cohort details such as income, age, gender, education, and loan amount."
+
+Your Task:
+Dashboard Creation:
+Data - 1
+Develop a comprehensive dashboard that shows overall issue splits + cohort splits
+Data - 2
+Analayse raw user data using automation and bucket issues into various themes (consider 1/2 ratings as negative and 3/4/5 as positives) along with sentiment analysis and cohort analysis. Prepare a dashboard with the percentages to show comprehensive data analysis
+
+Report Preparation:
+Write a detailed report summarizing your findings from both the analysis.
+Provide key insight and suggestions/way forward for addressing the identified issues.
+
+Deadline:
+Please submit your completed dashboard and report by 1st April 10am
+
+If you have any questions or need further clarification, please do not hesitate to reach out.
