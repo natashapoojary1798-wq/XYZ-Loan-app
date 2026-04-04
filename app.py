@@ -161,6 +161,10 @@ elif page == "📋 Data-1: Complaints":
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔍 Filters")
 
+    # Query Type filter
+    query_types = ["All"] + sorted(df1["Query Type"].unique().tolist())
+    sel_query_type = st.sidebar.selectbox("Query Type", query_types)
+
     # Category filter
     categories = ["All"] + sorted(df1["Category"].unique().tolist())
     sel_category = st.sidebar.selectbox("Category", categories)
@@ -169,24 +173,53 @@ elif page == "📋 Data-1: Complaints":
     sources = ["All"] + sorted(df1["Source"].unique().tolist())
     sel_source = st.sidebar.selectbox("Source Channel", sources)
 
+    # Demographic filters
+    st.sidebar.markdown("**Demographics**")
+
+    # Gender filter
+    genders = ["All"] + sorted(df1["gender"].unique().tolist())
+    sel_gender = st.sidebar.selectbox("Gender", genders)
+
+    # Age Range filter
+    age_ranges = ["All"] + sorted(df1["age_range"].unique().tolist())
+    sel_age = st.sidebar.selectbox("Age Range", age_ranges)
+
+    # Education filter
+    edu_levels = ["All"] + sorted(df1["education"].unique().tolist())
+    sel_edu = st.sidebar.selectbox("Education Level", edu_levels)
+
     # Zone filter
     zones = ["All"] + sorted(df1["zone"].unique().tolist())
     sel_zone = st.sidebar.selectbox("Zone", zones)
 
+    # Income Bucket filter
+    income_buckets = ["All"] + sorted(df1["income_bucket"].unique().tolist())
+    sel_income = st.sidebar.selectbox("Income Bucket", income_buckets)
+
     # Apply filters
     filtered = df1.copy()
+    if sel_query_type != "All":
+        filtered = filtered[filtered["Query Type"] == sel_query_type]
     if sel_category != "All":
         filtered = filtered[filtered["Category"] == sel_category]
     if sel_source != "All":
         filtered = filtered[filtered["Source"] == sel_source]
+    if sel_gender != "All":
+        filtered = filtered[filtered["gender"] == sel_gender]
+    if sel_age != "All":
+        filtered = filtered[filtered["age_range"] == sel_age]
+    if sel_edu != "All":
+        filtered = filtered[filtered["education"] == sel_edu]
     if sel_zone != "All":
         filtered = filtered[filtered["zone"] == sel_zone]
+    if sel_income != "All":
+        filtered = filtered[filtered["income_bucket"] == sel_income]
 
     st.markdown(f"**Filtered records:** {len(filtered):,}")
 
     # ── Tab Layout ──
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Issue Splits", "👥 Cohort Analysis", "📈 Trends", "🔍 Deep Dive", "💡 Key Insights"
+    tab1, tab2, tab3, tab5 = st.tabs([
+        "📊 Issue Splits", "👥 Cohort Analysis", "📈 Trends", "💡 Key Insights"
     ])
 
     # ── TAB 1: Issue Splits ──
@@ -225,6 +258,15 @@ elif page == "📋 Data-1: Complaints":
                           margin=dict(l=10, r=60, t=10, b=10))
         st.plotly_chart(fig, use_container_width=True)
 
+        st.subheader("Query Type Split")
+        qt_dist = an.get_cohort_split(filtered, "Query Type")
+        fig = px.pie(qt_dist, values="Count", names="Query Type",
+                     color_discrete_sequence=COLORS, hole=0.4)
+        fig.update_traces(textposition="outside", textinfo="percent+label",
+                          textfont_size=11)
+        fig.update_layout(height=550, margin=dict(t=40, b=80, l=80, r=80))
+        st.plotly_chart(fig, use_container_width=True)
+
     # ── TAB 2: Cohort Analysis ──
     with tab2:
         cohort_option = st.selectbox(
@@ -239,29 +281,15 @@ elif page == "📋 Data-1: Complaints":
             }.get(x, x)
         )
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader(f"Issue Volume by {cohort_option.replace('_', ' ').title()}")
-            cohort_dist = an.get_cohort_split(filtered, cohort_option)
-            fig = px.bar(cohort_dist, x=cohort_option, y="Count",
-                         text="Percentage", color=cohort_option,
-                         color_discrete_sequence=COLORS)
-            fig.update_traces(texttemplate="%{text}%", textposition="outside")
-            fig.update_layout(height=400, showlegend=False,
-                              margin=dict(t=10, b=10))
-            st.plotly_chart(fig, use_container_width=True)
-
-        with col2:
-            st.subheader(f"Category Breakdown by {cohort_option.replace('_', ' ').title()}")
-            ct, ct_pct = an.get_category_by_cohort(filtered, cohort_option)
-            fig = px.bar(ct_pct.reset_index(), x=cohort_option,
-                         y=ct_pct.columns.tolist(),
-                         barmode="stack", color_discrete_sequence=COLORS)
-            fig.update_layout(height=400, yaxis_title="Percentage (%)",
-                              legend_title="Category",
-                              margin=dict(t=10, b=10))
-            st.plotly_chart(fig, use_container_width=True)
+        st.subheader(f"Issue Volume by {cohort_option.replace('_', ' ').title()}")
+        cohort_dist = an.get_cohort_split(filtered, cohort_option)
+        fig = px.bar(cohort_dist, x=cohort_option, y="Count",
+                     text="Percentage", color=cohort_option,
+                     color_discrete_sequence=COLORS)
+        fig.update_traces(texttemplate="%{text}%", textposition="outside")
+        fig.update_layout(height=400, showlegend=False,
+                          margin=dict(t=10, b=10))
+        st.plotly_chart(fig, use_container_width=True)
 
         # Top 10 Sub-Category × Cohort
         st.subheader(f"Top 10 Sub-Category × {cohort_option.replace('_', ' ').title()}")
@@ -300,20 +328,6 @@ elif page == "📋 Data-1: Complaints":
         fig.update_layout(height=450, xaxis_title="Month", yaxis_title="Issue Count",
                           margin=dict(t=10, b=10))
         st.plotly_chart(fig, use_container_width=True)
-
-    # ── TAB 4: Deep Dive ──
-    with tab4:
-        st.subheader("Query Type Split")
-        qt_dist = an.get_cohort_split(filtered, "Query Type")
-        fig = px.pie(qt_dist, values="Count", names="Query Type",
-                     color_discrete_sequence=COLORS, hole=0.4)
-        fig.update_traces(textposition="outside", textinfo="percent+label",
-                          textfont_size=11)
-        fig.update_layout(height=550, margin=dict(t=40, b=80, l=80, r=80))
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("Sample Data")
-        st.dataframe(filtered.head(100), use_container_width=True, height=400)
 
     # ── TAB 5: Key Insights ──
     with tab5:
@@ -434,14 +448,42 @@ elif page == "⭐ Data-2: Reviews":
     sentiments = ["All"] + sorted(df2["sentiment"].unique().tolist())
     sel_sentiment = st.sidebar.selectbox("Sentiment", sentiments)
 
-    theme_list = ["All"] + sorted(df2["theme"].dropna().unique().tolist())
+    # Apply sentiment filter first, then build theme list from filtered data
+    _sentiment_filtered = df2.copy()
+    if sel_sentiment != "All":
+        _sentiment_filtered = _sentiment_filtered[_sentiment_filtered["sentiment"] == sel_sentiment]
+
+    # Theme list updates based on selected sentiment
+    theme_list = ["All"] + sorted(_sentiment_filtered["theme"].dropna().unique().tolist())
     sel_theme = st.sidebar.selectbox("Theme", theme_list)
 
-    filtered2 = df2.copy()
-    if sel_sentiment != "All":
-        filtered2 = filtered2[filtered2["sentiment"] == sel_sentiment]
+    # Demographic filters
+    st.sidebar.markdown("**Demographics**")
+
+    d2_ages = ["All"] + sorted(df2["age_range"].dropna().unique().tolist())
+    d2_sel_age = st.sidebar.selectbox("Age Range", d2_ages, key="d2_age")
+
+    d2_zones = ["All"] + sorted(df2["zone"].dropna().unique().tolist())
+    d2_sel_zone = st.sidebar.selectbox("Zone", d2_zones, key="d2_zone")
+
+    d2_edus = ["All"] + sorted(df2["education"].dropna().unique().tolist())
+    d2_sel_edu = st.sidebar.selectbox("Education Level", d2_edus, key="d2_edu")
+
+    d2_incomes = ["All"] + sorted(df2["income_bucket"].dropna().unique().tolist())
+    d2_sel_income = st.sidebar.selectbox("Income Bucket", d2_incomes, key="d2_income")
+
+    # Apply all filters
+    filtered2 = _sentiment_filtered.copy()
     if sel_theme != "All":
         filtered2 = filtered2[filtered2["theme"] == sel_theme]
+    if d2_sel_age != "All":
+        filtered2 = filtered2[filtered2["age_range"] == d2_sel_age]
+    if d2_sel_zone != "All":
+        filtered2 = filtered2[filtered2["zone"] == d2_sel_zone]
+    if d2_sel_edu != "All":
+        filtered2 = filtered2[filtered2["education"] == d2_sel_edu]
+    if d2_sel_income != "All":
+        filtered2 = filtered2[filtered2["income_bucket"] == d2_sel_income]
 
     st.markdown(f"**Filtered reviews:** {len(filtered2):,}")
 

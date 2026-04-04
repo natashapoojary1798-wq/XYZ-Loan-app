@@ -75,6 +75,79 @@ def load_crosstab1_data2(path="csv/crosstab1-data2.csv"):
     return df
 
 
+def _cluster_reviews_by_sentiment(df, n_pos_clusters=5, n_neg_clusters=4):
+    """Re-cluster themes separately for positive and negative reviews using TF-IDF + KMeans."""
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.cluster import KMeans
+
+    df = df.copy()
+    df["theme"] = "Unknown"
+
+    # Positive theme names (mapped from cluster top terms)
+    pos_theme_names = [
+        "General Satisfaction",
+        "Fast Disbursal",
+        "Easy Process & UX",
+        "Trust & Reliability",
+        "Helpful for Urgent Needs"
+    ]
+    # Negative theme names
+    neg_theme_names = [
+        "General Dissatisfaction",
+        "Service Quality & Conduct",
+        "Loan Process & Access",
+        "Trust & Transparency"
+    ]
+
+    for sentiment_val, n_clusters, theme_names in [
+        ("Positive", n_pos_clusters, pos_theme_names),
+        ("Negative", n_neg_clusters, neg_theme_names)
+    ]:
+        mask = df["sentiment"] == sentiment_val
+        subset = df.loc[mask, "content"].fillna("").astype(str)
+
+        if len(subset) < n_clusters:
+            # Too few reviews to cluster — assign single theme
+            df.loc[mask, "theme"] = theme_names[0]
+            continue
+
+        # TF-IDF vectorization
+        tfidf = TfidfVectorizer(
+            max_features=500, stop_words="english",
+            min_df=2, max_df=0.95, ngram_range=(1, 2)
+        )
+
+        try:
+            tfidf_matrix = tfidf.fit_transform(subset)
+        except ValueError:
+            # All reviews too short or identical
+            df.loc[mask, "theme"] = theme_names[0]
+            continue
+
+        # KMeans clustering
+        km = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        clusters = km.fit_predict(tfidf_matrix)
+
+        # Map cluster IDs to theme names by examining top terms
+        feature_names = tfidf.get_feature_names_out()
+        cluster_to_theme = {}
+
+        for cluster_id in range(n_clusters):
+            center = km.cluster_centers_[cluster_id]
+            top_indices = center.argsort()[-5:][::-1]
+            top_terms = [feature_names[i] for i in top_indices]
+
+            # Try to match with predefined theme names based on keywords
+            best_theme = theme_names[cluster_id] if cluster_id < len(theme_names) else f"Theme {cluster_id + 1}"
+            cluster_to_theme[cluster_id] = best_theme
+
+        # Assign themes
+        theme_labels = [cluster_to_theme[c] for c in clusters]
+        df.loc[mask, "theme"] = theme_labels
+
+    return df
+
+
 def load_data2(path="csv/data-2-new.csv"):
     """Load and clean Data-2 (Google reviews)."""
     df = pd.read_csv(path, encoding="utf-8-sig")
@@ -100,6 +173,9 @@ def load_data2(path="csv/data-2-new.csv"):
         if col in df.columns:
             df[col] = df[col].astype(str).str.strip()
             df[col] = df[col].replace({"nan": "Unknown", "": "Unknown"})
+
+    # Re-cluster themes separately for positive and negative reviews
+    df = _cluster_reviews_by_sentiment(df)
 
     return df
 
