@@ -334,103 +334,80 @@ elif page == "📋 Data-1: Complaints":
         st.subheader("💡 Key Insights — Complaint Analysis")
         st.markdown("---")
 
-        # Compute stats from full df1 (not filtered)
+        # Compute all stats dynamically from full df1
         _cat_dist = an.get_category_distribution(df1)
         _top_cat = _cat_dist.iloc[0]
         _second_cat = _cat_dist.iloc[1] if len(_cat_dist) > 1 else None
         _src_dist = an.get_source_distribution(df1)
         _top_src = _src_dist.iloc[0]
+        _second_src = _src_dist.iloc[1] if len(_src_dist) > 1 else None
         _sub_dist = an.get_subcategory_distribution(df1, top_n=5)
         _top_sub = _sub_dist.iloc[0]
         _age_dist = an.get_cohort_split(df1, "age_range")
         _top_age = _age_dist.iloc[0]
+        _foreclosure_row = _cat_dist[_cat_dist["Category"] == "Foreclosure"]
+        _foreclosure_pct = float(_foreclosure_row.iloc[0]["Percentage"]) if len(_foreclosure_row) > 0 else 0
+        _combined_pct = float(_top_cat['Percentage']) + (float(_second_cat['Percentage']) if _second_cat is not None else 0)
 
-        # Insight cards
+        # Build insight cards
+        def _card(bg, border, title, body):
+            return f"""
+            <div style="background: {bg}; border-left: 4px solid {border}; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">{title}</h4>
+                <p style="margin:0; font-size: 0.95rem;">{body}</p>
+            </div>"""
+
         col_a, col_b = st.columns(2)
 
         with col_a:
-            st.markdown("""
-            <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">🔥 Payment issues are the #1 problem</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    <b>{cat}</b> makes up <b>{pct}%</b> of all complaints ({cnt:,} tickets).
-                    Within this, "<i>Payment Not Updated</i>" alone drives <b>{sub_pct}%</b> of total volume.
-                    Customers pay but don't see it reflected — that's the single biggest pain point.
-                </p>
-            </div>
-            """.format(
-                cat=_top_cat['Category'], pct=_top_cat['Percentage'],
-                cnt=_top_cat['Count'], sub_pct=_top_sub['Percentage']
+            st.markdown(_card("#fff3e0", "#ff9800",
+                f"🔥 {_top_cat['Category']} is the #1 issue",
+                f"<b>{_top_cat['Category']}</b> makes up <b>{_top_cat['Percentage']}%</b> of all complaints "
+                f"({_top_cat['Count']:,} tickets). Within this, \"<i>{_top_sub['Sub Category']}</i>\" alone "
+                f"drives <b>{_top_sub['Percentage']}%</b> of total volume."
             ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">📧 Email dominates as support channel</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    <b>{pct}%</b> of complaints come through <b>{src}</b>.
-                    Phone is a distant second at ~10%. This is typical for a digital lending product
-                    — users prefer written communication they can reference later.
-                </p>
-            </div>
-            """.format(src=_top_src['Source'], pct=_top_src['Percentage']), unsafe_allow_html=True)
+            st.markdown(_card("#e3f2fd", "#2196f3",
+                f"📧 {_top_src['Source']} dominates as support channel",
+                f"<b>{_top_src['Percentage']}%</b> of complaints come through <b>{_top_src['Source']}</b>."
+                + (f" {_second_src['Source']} is a distant second at {_second_src['Percentage']}%." if _second_src is not None else "")
+            ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">📊 Two categories = 57% of all complaints</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    {cat1} ({pct1}%) and {cat2} ({pct2}%) together make up
-                    over half of all complaints. This concentration is actually helpful —
-                    fixing just two areas could dramatically reduce ticket volume.
-                </p>
-            </div>
-            """.format(
-                cat1=_top_cat['Category'], pct1=_top_cat['Percentage'],
-                cat2=_second_cat['Category'] if _second_cat is not None else "N/A",
-                pct2=_second_cat['Percentage'] if _second_cat is not None else 0
+            st.markdown(_card("#f3e5f5", "#9c27b0",
+                f"📊 Two categories = {_combined_pct:.0f}% of all complaints",
+                f"{_top_cat['Category']} ({_top_cat['Percentage']}%) and "
+                + (f"{_second_cat['Category']} ({_second_cat['Percentage']}%)" if _second_cat is not None else "N/A")
+                + f" together account for <b>{_combined_pct:.0f}%</b>. "
+                f"Fixing just these two areas could dramatically reduce ticket volume."
             ), unsafe_allow_html=True)
 
         with col_b:
-            st.markdown("""
-            <div style="background: #fce4ec; border-left: 4px solid #e91e63; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">⚠️ Collection practices cause friction</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    Collection-related complaints ({pct}%) include "Promise To Pay Denied"
-                    and penalty charge disputes. Users feel pressured — this matches
-                    the harassment concerns seen in Play Store reviews too.
-                </p>
-            </div>
-            """.format(
-                pct=_second_cat['Percentage'] if _second_cat is not None else 0
+            st.markdown(_card("#fce4ec", "#e91e63",
+                f"⚠️ {_second_cat['Category'] if _second_cat is not None else 'Second category'} causes friction",
+                f"{_second_cat['Category'] if _second_cat is not None else 'N/A'} complaints "
+                f"({_second_cat['Percentage'] if _second_cat is not None else 0}%) "
+                f"include issues like \"{_sub_dist.iloc[1]['Sub Category'] if len(_sub_dist) > 1 else 'N/A'}\" "
+                f"and penalty charge disputes."
             ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">🏠 Foreclosure demand is notable</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    About <b>10.8%</b> of complaints are foreclosure-related. Both eligible
-                    and ineligible users are asking about early closure — either loan terms
-                    aren't communicated well enough, or users just want more flexibility.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(_card("#e8f5e9", "#4caf50",
+                f"🏠 Foreclosure demand at {_foreclosure_pct}%",
+                f"About <b>{_foreclosure_pct}%</b> of complaints are foreclosure-related. "
+                f"Both eligible and ineligible users are asking about early closure."
+            ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #fff8e1; border-left: 4px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">📌 Young borrowers (25-33) file the most complaints</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    The <b>{age}</b> age group generates <b>{pct}%</b> of all complaints.
-                    They're likely the core user base and also the most digitally active,
-                    so they're quicker to raise issues when something goes wrong.
-                </p>
-            </div>
-            """.format(age=_top_age['age_range'], pct=_top_age['Percentage']), unsafe_allow_html=True)
+            st.markdown(_card("#fff8e1", "#ffc107",
+                f"📌 {_top_age['age_range']} is the most active age group",
+                f"The <b>{_top_age['age_range']}</b> age group generates <b>{_top_age['Percentage']}%</b> "
+                f"of all complaints — likely the core user base."
+            ), unsafe_allow_html=True)
 
         st.markdown("---")
         st.markdown("#### 💡 Bottom line")
         st.info(
-            "Payment reconciliation delays and collection-related friction are the two "
-            "biggest drivers of complaint volume. Fixing real-time payment status updates "
-            "alone could eliminate ~25% of all incoming tickets."
+            f"The biggest driver of complaint volume is \"{_top_sub['Sub Category']}\" "
+            f"({_top_sub['Percentage']}% of tickets). Addressing this single issue "
+            f"could make the most immediate impact on reducing support workload."
         )
 
 
@@ -609,7 +586,7 @@ elif page == "⭐ Data-2: Reviews":
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.subheader("Theme × Sentiment")
+            st.subheader("Theme by Sentiment")
             ct, ct_pct = an.get_theme_sentiment_cross(filtered2)
             fig = px.bar(ct_pct.reset_index(), x="theme",
                          y=[c for c in ct_pct.columns if c in NEG_POS_COLORS],
@@ -668,15 +645,27 @@ elif page == "⭐ Data-2: Reviews":
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.subheader(f"Sentiment by {cohort_option2.replace('_', ' ').title()}")
-            ct, ct_pct = an.get_sentiment_by_cohort(filtered2, cohort_option2)
-            fig = px.bar(ct_pct.reset_index(), x=cohort_option2,
-                         y=[c for c in ct_pct.columns if c in NEG_POS_COLORS],
-                         barmode="stack",
-                         color_discrete_map=NEG_POS_COLORS)
-            fig.update_layout(height=400, yaxis_title="Percentage (%)",
-                              legend_title="Sentiment",
-                              margin=dict(t=10, b=10))
+            st.subheader(f"Theme by {cohort_option2.replace('_', ' ').title()}")
+            ct_theme = pd.crosstab(filtered2[cohort_option2], filtered2["theme"])
+            ct_theme_pct = (ct_theme.div(ct_theme.sum(axis=1), axis=0) * 100).round(1)
+            fig = px.imshow(
+                ct_theme_pct,
+                text_auto=True,
+                aspect="auto",
+                color_continuous_scale="Blues",
+                labels=dict(
+                    x="Theme",
+                    y=cohort_option2.replace("_", " ").title(),
+                    color="Percentage %"
+                )
+            )
+            fig.update_traces(texttemplate="%{z}%")
+            fig.update_layout(
+                height=400,
+                margin=dict(t=10, b=10),
+                xaxis=dict(tickangle=-30),
+                coloraxis_showscale=True
+            )
             st.plotly_chart(fig, use_container_width=True)
 
     # ── TAB 4: Reviews Browser ──
@@ -698,101 +687,121 @@ elif page == "⭐ Data-2: Reviews":
         st.subheader("💡 Key Insights — Reviews Analysis")
         st.markdown("---")
 
-        # Compute stats from full df2
+        # Compute all stats dynamically from full df2
+        _total_d2 = max(len(df2), 1)
         _pos_count = (df2["sentiment"] == "Positive").sum()
         _neg_count = (df2["sentiment"] == "Negative").sum()
-        _pos_pct = _pos_count / len(df2) * 100
-        _neg_pct = _neg_count / len(df2) * 100
+        _pos_pct = _pos_count / _total_d2 * 100
+        _neg_pct = _neg_count / _total_d2 * 100
         _five_star = (df2["rating"] == 5).sum()
-        _five_pct = _five_star / len(df2) * 100
         _one_star = (df2["rating"] == 1).sum()
-        _one_pct = _one_star / len(df2) * 100
+        _one_pct = _one_star / _total_d2 * 100
         _avg_rating = df2["rating"].mean()
+
+        # Theme distribution (dynamic)
+        _td = an.get_theme_distribution(df2)
+        _top_theme = _td.iloc[0] if len(_td) > 0 else None
+        _t2 = _td.iloc[1] if len(_td) > 1 else None
+        _t3 = _td.iloc[2] if len(_td) > 2 else None
+
+        # Cohort sentiment (dynamic)
+        _age_ct, _age_pct = an.get_sentiment_by_cohort(df2, "age_range")
+        _inc_ct, _inc_pct = an.get_sentiment_by_cohort(df2, "income_bucket")
+
+        if "Negative" in _age_pct.columns:
+            _worst_age = _age_pct["Negative"].idxmax()
+            _worst_age_neg = _age_pct.loc[_worst_age, "Negative"]
+            _best_age = _age_pct["Negative"].idxmin()
+            _best_age_neg = _age_pct.loc[_best_age, "Negative"]
+        else:
+            _worst_age, _worst_age_neg, _best_age, _best_age_neg = "N/A", 0, "N/A", 0
+
+        if "Negative" in _inc_pct.columns:
+            _worst_inc = _inc_pct["Negative"].idxmax()
+            _worst_inc_neg = _inc_pct.loc[_worst_inc, "Negative"]
+        else:
+            _worst_inc, _worst_inc_neg = "N/A", 0
+
+        # Negative review keywords (dynamic)
+        _neg_reviews_text = df2[df2["sentiment"] == "Negative"]["content"].dropna().astype(str)
+        _neg_text_combined = " ".join(_neg_reviews_text).lower()
+        _keyword_hits = []
+        for w in ["harassment", "scam", "fraud", "worst", "cheat", "torture", "unethical", "trap", "terrible", "horrible", "rude", "threat"]:
+            cnt = _neg_text_combined.count(w)
+            if cnt > 0:
+                _keyword_hits.append((w, cnt))
+        _keyword_hits.sort(key=lambda x: -x[1])
+
+        def _card2(bg, border, title, body):
+            return f"""
+            <div style="background: {bg}; border-left: 4px solid {border}; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                <h4 style="margin:0 0 8px 0;">{title}</h4>
+                <p style="margin:0; font-size: 0.95rem;">{body}</p>
+            </div>"""
 
         col_a, col_b = st.columns(2)
 
         with col_a:
-            st.markdown("""
-            <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">✅ Overall sentiment is strongly positive</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    <b>{pos_pct:.0f}%</b> of reviews are positive ({pos:,} out of {total:,}).
-                    Average rating is <b>{avg:.1f} ⭐</b>. The app is generally well-received
-                    by its user base.
-                </p>
-            </div>
-            """.format(pos_pct=_pos_pct, pos=_pos_count, total=len(df2), avg=_avg_rating),
-            unsafe_allow_html=True)
+            st.markdown(_card2("#e8f5e9", "#4caf50",
+                f"✅ {_pos_pct:.0f}% positive sentiment",
+                f"<b>{_pos_pct:.0f}%</b> of reviews are positive ({_pos_count:,} out of {_total_d2:,}). "
+                f"Average rating is <b>{_avg_rating:.1f} ⭐</b>."
+            ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #fce4ec; border-left: 4px solid #e91e63; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">🔴 Negatives are extreme — almost all 1-star</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    Of the <b>{neg:,}</b> negative reviews ({neg_pct:.1f}%),
-                    <b>{one:,}</b> are 1-star ({one_pct:.0f}% of total).
-                    There's almost no middle ground — users are either very happy
-                    or very unhappy. Very few 2-3 star ratings exist.
-                </p>
-            </div>
-            """.format(neg=_neg_count, neg_pct=_neg_pct, one=_one_star, one_pct=_one_pct),
-            unsafe_allow_html=True)
+            st.markdown(_card2("#fce4ec", "#e91e63",
+                f"🔴 {_neg_count:,} negative reviews ({_neg_pct:.1f}%)",
+                f"Of the <b>{_neg_count:,}</b> negative reviews, "
+                f"<b>{_one_star:,}</b> are 1-star ({_one_pct:.0f}% of total). "
+                f"Very few 2-3 star ratings exist — users go straight to 1 star when unhappy."
+            ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">📉 Older users (42+) are the most dissatisfied</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    The 42+ age group has a <b>17.2%</b> negative rate — more than double
-                    the 7% seen in younger groups. This segment may need a different
-                    support approach (phone callbacks vs. self-service).
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(_card2("#f3e5f5", "#9c27b0",
+                f"📉 {_worst_age} users are the most dissatisfied",
+                f"The <b>{_worst_age}</b> age group has a <b>{_worst_age_neg:.1f}%</b> negative rate, "
+                f"compared to <b>{_best_age_neg:.1f}%</b> for the <b>{_best_age}</b> group."
+            ), unsafe_allow_html=True)
 
         with col_b:
-            st.markdown("""
-            <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">⚡ Negative reviews mention harassment & scams</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    The harshest reviews consistently mention "harassment", "mental torture",
-                    "unethical practices", and "scammers" — mostly tied to collection
-                    follow-ups. Even if these are a small minority, they're publicly visible
-                    and damaging to the brand.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            # Negative keywords card
+            if _keyword_hits:
+                kw_text = ", ".join(f"\"<i>{w}</i>\" ({c}×)" for w, c in _keyword_hits[:5])
+                st.markdown(_card2("#fff3e0", "#ff9800",
+                    "⚡ Common words in negative reviews",
+                    f"Scanning negative review text: {kw_text}. "
+                    f"These suggest concerns around collection practices and service quality."
+                ), unsafe_allow_html=True)
+            else:
+                st.markdown(_card2("#fff3e0", "#ff9800",
+                    "⚡ Negative review analysis",
+                    f"There are {_neg_count:,} negative reviews. Most express strong dissatisfaction."
+                ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">🏷️ "App Experience" is the dominant theme</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    About <b>79%</b> of reviews fall under "App Experience" —
-                    the remaining split between "Positive Feedback" (17%) and
-                    "Loan Process" (4.5%). Most users are commenting on the
-                    app itself rather than loan terms.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            # Theme card
+            if _top_theme is not None:
+                theme_body = f"<b>{_top_theme['Percentage']}%</b> of reviews fall under \"<b>{_top_theme['Theme']}</b>\""
+                if _t2 is not None:
+                    theme_body += f", followed by \"{_t2['Theme']}\" ({_t2['Percentage']}%)"
+                if _t3 is not None:
+                    theme_body += f" and \"{_t3['Theme']}\" ({_t3['Percentage']}%)"
+                theme_body += "."
+                st.markdown(_card2("#e3f2fd", "#2196f3",
+                    f"🏷️ \"{_top_theme['Theme']}\" is the top theme",
+                    theme_body
+                ), unsafe_allow_html=True)
 
-            st.markdown("""
-            <div style="background: #fff8e1; border-left: 4px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                <h4 style="margin:0 0 8px 0;">💰 Mid-income users are surprisingly unhappy</h4>
-                <p style="margin:0; font-size: 0.95rem;">
-                    The ₹75K-1L income bracket has a <b>22.2%</b> negative rate —
-                    the highest of any income segment. Lower and higher income groups
-                    are more satisfied. This mid-tier group may have higher
-                    expectations that aren't being met.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            # Income card
+            st.markdown(_card2("#fff8e1", "#ffc107",
+                f"💰 {_worst_inc} has highest dissatisfaction",
+                f"The <b>{_worst_inc}</b> income bracket has a <b>{_worst_inc_neg:.1f}%</b> negative rate — "
+                f"the highest of any income segment."
+            ), unsafe_allow_html=True)
 
         st.markdown("---")
         st.markdown("#### 💡 Bottom line")
         st.info(
-            "The Play Store picture is largely positive (91% favorable), "
-            "but the negative reviews are disproportionately loud and damaging. "
-            "Collection-related complaints mirror what's seen in Data-1 — "
-            "softening collection practices would improve both internal complaint metrics "
-            "and public-facing ratings."
+            f"The Play Store picture is largely positive ({_pos_pct:.0f}% favorable), "
+            f"but the {_neg_count:,} negative reviews are disproportionately harsh. "
+            f"The most dissatisfied segment is the {_worst_age} age group ({_worst_age_neg:.1f}% negative)."
         )
 
 
